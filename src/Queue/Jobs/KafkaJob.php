@@ -11,7 +11,7 @@ use Illuminate\Queue\Jobs\JobName;
 use Illuminate\Support\Str;
 use Rapide\LaravelQueueKafka\Exceptions\QueueKafkaException;
 use Rapide\LaravelQueueKafka\Queue\KafkaQueue;
-use RdKafka\ConsumerTopic;
+use RdKafka\KafkaConsumer;
 use RdKafka\Message;
 
 class KafkaJob extends Job implements JobContract
