@@ -43,8 +43,8 @@ class LaravelQueueKafkaServiceProvider extends ServiceProvider
             return new \RdKafka\TopicConf();
         });
 
-        $this->app->bind('queue.kafka.producer', function () {
-            return new \RdKafka\Producer();
+        $this->app->bind('queue.kafka.producer', function ($app, $parameters) {
+            return new \RdKafka\Producer($parameters['conf']);
         });
 
         $this->app->bind('queue.kafka.conf', function () {
@@ -52,7 +52,7 @@ class LaravelQueueKafkaServiceProvider extends ServiceProvider
         });
 
         $this->app->bind('queue.kafka.consumer', function ($app, $parameters) {
-            return new \RdKafka\Consumer($parameters['conf']);
+            return new \RdKafka\KafkaConsumer($parameters['conf']);
         });
     }
 

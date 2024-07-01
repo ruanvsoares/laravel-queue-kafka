@@ -1,9 +1,8 @@
 Kafka Queue driver for Laravel
 ======================
-[![Latest Stable Version](https://poser.pugx.org/rapide/laravel-queue-kafka/v/stable?format=flat-square)](https://packagist.org/packages/rapide/laravel-queue-kafka)
+[![Latest Stable Version](https://poser.pugx.org/rapide/laravel-queue-kafka/v/stable?format=flat-square)](https://packagist.org/packages/ruanvsoares/laravel-queue-kafka)
 [![Build Status](https://travis-ci.org/rapideinternet/laravel-queue-kafka.svg?branch=master)](https://travis-ci.org/rapideinternet/laravel-queue-kafka)
-[![Total Downloads](https://poser.pugx.org/rapide/laravel-queue-kafka/downloads?format=flat-square)](https://packagist.org/packages/rapide/laravel-queue-kafka)
-[![StyleCI](https://styleci.io/repos/99249783/shield)](https://styleci.io/repos/99249783)
+[![Total Downloads](https://poser.pugx.org/rapide/laravel-queue-kafka/downloads?format=flat-square)](https://packagist.org/packages/ruanvsoares/laravel-queue-kafka)
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE)
 
 #### Installation
@@ -11,13 +10,7 @@ Kafka Queue driver for Laravel
 1. Install [librdkafka c library](https://github.com/edenhill/librdkafka)
 
     ```bash
-    $ cd /tmp
-    $ mkdir librdkafka
-    $ cd librdkafka
-    $ git clone https://github.com/edenhill/librdkafka.git .
-    $ ./configure
-    $ make
-    $ make install
+    $ sudo apt-get install -y librdkafka-dev
     ```
 2. Install the [php-rdkafka](https://github.com/arnaud-lb/php-rdkafka) PECL extension
 
@@ -43,23 +36,19 @@ Kafka Queue driver for Laravel
     
 4. Install this package via composer using:
 
-	    composer require rapide/laravel-queue-kafka
+	    composer require ruanvsoares/laravel-queue-kafka
 
-5. Add LaravelQueueKafkaServiceProvider to `providers` array in `config/app.php`:
+5. Add LaravelQueueKafkaServiceProvider to `providers` array in `config/app.php` or in `bootstrap/providers.php`:
 
 	    Rapide\LaravelQueueKafka\LaravelQueueKafkaServiceProvider::class,
-	
-   If you are using Lumen, put this in `bootstrap/app.php`
-    
-        $app->register(Rapide\LaravelQueueKafka\LumenQueueKafkaServiceProvider::class);
 
 6. Add these properties to `.env` with proper values:
 
 		QUEUE_DRIVER=kafka
 
-7. If you want to run a worker for a specific consumer group
+7. If you want to run a worker for a specific consumer group add to `.env`
 
-        export KAFKA_CONSUMER_GROUP_ID="group2" && php artisan queue:work --sleep=3 --tries=3
+   KAFKA_CONSUMER_GROUP_ID="group2"
     
     Explaination of consumergroups can be found in this article 
     http://blog.cloudera.com/blog/2018/05/scalability-of-kafka-messaging-using-consumer-groups/
@@ -87,9 +76,10 @@ You can contribute to this package by discovering bugs and opening issues. Pleas
 
 #### Supported versions of Laravel 
 
-Tested on: [5.4, 5.5, 5.6, 5.7]
+Tested on: [11.*]
 
-#### New version is underway
-
-A version for Laravel 6,7,8 is underway. 
-Also supporting the new RdKafka library
+## Fixes by Ruan Soares
+- Adjust to work with Laravel 11
+- Ajust to work with subscribe and commit at consumer, this make the consumer to work with multiple topics and partitions
+- Add auto create of default topic
+- Fully tested with Laravel 11

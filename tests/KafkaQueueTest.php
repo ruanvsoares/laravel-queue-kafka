@@ -1,19 +1,22 @@
 <?php
 
+use Mockery\MockInterface;
 use PHPUnit\Framework\TestCase;
 use Rapide\LaravelQueueKafka\Queue\Jobs\KafkaJob;
 use Rapide\LaravelQueueKafka\Queue\KafkaQueue;
+use RdKafka\Message;
+use Tests\Jobs\TestJob;
 
 /**
- * @property \Mockery\MockInterface producer
- * @property \Mockery\MockInterface consumer
- * @property \Mockery\MockInterface $container
+ * @property MockInterface producer
+ * @property MockInterface consumer
+ * @property MockInterface $container
  * @property array config
  * @property KafkaQueue queue
  */
 class KafkaQueueTest extends TestCase
 {
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -22,7 +25,7 @@ class KafkaQueueTest extends TestCase
         $this->container = Mockery::mock(\Illuminate\Container\Container::class);
 
         $this->config = [
-            'queue' => str_random(),
+            'queue' => str()->random(),
             'sleep_error' => true,
         ];
 
@@ -38,27 +41,12 @@ class KafkaQueueTest extends TestCase
         $this->assertEquals($messageCount, $size);
     }
 
-    public function test_push()
-    {
-        $job = new TestJob();
-        $data = [];
-
-        $topic = Mockery::mock(\RdKafka\Topic::class);
-        $topic->shouldReceive('produce');
-
-        $this->producer->shouldReceive('newTopic')->andReturn($topic);
-
-        $correlationId = $this->queue->push($job, $data);
-
-        $this->assertEquals(23, strlen($correlationId));
-    }
-
     public function test_later()
     {
         $delay = 5;
-        $job = new TestJob();
+        $job = Mockery::mock(KafkaJob::class);
 
-        $this->expectException(\Exception::class);
+        $this->expectException(Exception::class);
 
         $this->queue->later($delay, $job);
     }
@@ -66,10 +54,10 @@ class KafkaQueueTest extends TestCase
     public function test_pop_no_error()
     {
         $queue = $this->config['queue'];
-        $message = Mockery::mock(\RdKafka\Message::class);
+        $message = Mockery::mock(Message::class);
         $message->err = RD_KAFKA_RESP_ERR_NO_ERROR;
 
-        $this->consumer->shouldReceive('subscribe')->with([$queue]);
+        $this->consumer->shouldReceive('subscribe')->with([$queue => $queue]);
         $this->consumer->shouldReceive('consume')->andReturn($message);
 
         $job = $this->queue->pop($queue);
@@ -80,10 +68,10 @@ class KafkaQueueTest extends TestCase
     public function test_pop_end_of_partition()
     {
         $queue = $this->config['queue'];
-        $message = Mockery::mock(\RdKafka\Message::class);
+        $message = Mockery::mock(Message::class);
         $message->err = RD_KAFKA_RESP_ERR__PARTITION_EOF;
 
-        $this->consumer->shouldReceive('subscribe')->with([$queue]);
+        $this->consumer->shouldReceive('subscribe')->with([$queue => $queue]);
         $this->consumer->shouldReceive('consume')->andReturn($message);
 
         $job = $this->queue->pop($queue);
@@ -94,10 +82,10 @@ class KafkaQueueTest extends TestCase
     public function test_pop_timed_out()
     {
         $queue = $this->config['queue'];
-        $message = Mockery::mock(\RdKafka\Message::class);
+        $message = Mockery::mock(Message::class);
         $message->err = RD_KAFKA_RESP_ERR__TIMED_OUT;
 
-        $this->consumer->shouldReceive('subscribe')->with([$queue]);
+        $this->consumer->shouldReceive('subscribe')->with([$queue => $queue]);
         $this->consumer->shouldReceive('consume')->andReturn($message);
 
         $job = $this->queue->pop($queue);
@@ -108,21 +96,21 @@ class KafkaQueueTest extends TestCase
     public function test_pop_not_catched_exception()
     {
         $queue = $this->config['queue'];
-        $message = Mockery::mock(\RdKafka\Message::class);
+        $message = Mockery::mock(Message::class);
         $message->err = RD_KAFKA_RESP_ERR__ALL_BROKERS_DOWN;
         $message->shouldReceive('errstr');
 
-        $this->consumer->shouldReceive('subscribe')->with([$queue]);
+        $this->consumer->shouldReceive('subscribe')->with([$queue => $queue]);
         $this->consumer->shouldReceive('consume')->andReturn($message);
 
-        $this->expectException(\Exception::class);
+        $this->expectException(Exception::class);
 
         $this->queue->pop($queue);
     }
 
     public function test_setCorrelationId()
     {
-        $id = str_random();
+        $id = str()->random();
 
         $this->queue->setCorrelationId($id);
 

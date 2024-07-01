@@ -26,17 +26,18 @@ class KafkaConnectorTest extends TestCase
 
         $producer = Mockery::mock(\RdKafka\Producer::class);
         $producer->shouldReceive('addBrokers')->withArgs([$config['brokers']]);
+        $producer->shouldReceive('newTopic')->withArgs([$config['queue'], $topic_conf]);
 
         $conf = Mockery::mock(\RdKafka\Conf::class);
         $conf->shouldReceive('set')->atLeast(4);
         $conf->shouldReceive('setDefaultTopicConf')->with($topic_conf);
 
         $container
-            ->shouldReceive('makeWith')
-            ->withArgs(['queue.kafka.producer', []])
+            ->shouldReceive('make')
+            ->withArgs(['queue.kafka.producer',  ['conf' => $conf]])
             ->andReturn($producer);
         $container
-            ->shouldReceive('makeWith')
+            ->shouldReceive('make')
             ->withArgs(['queue.kafka.topic_conf', []])
             ->andReturn($topic_conf);
         $container
@@ -44,7 +45,7 @@ class KafkaConnectorTest extends TestCase
             ->withArgs(['queue.kafka.consumer', ['conf' => $conf]])
             ->andReturn($consumer);
         $container
-            ->shouldReceive('makeWith')
+            ->shouldReceive('make')
             ->withArgs(['queue.kafka.conf', []])
             ->andReturn($conf);
 

@@ -33,7 +33,7 @@ class KafkaQueue extends Queue implements QueueContract
      */
     private $producer;
     /**
-     * @var \RdKafka\Consumer
+     * @var \RdKafka\KafkaConsumer
      */
     private $consumer;
     /**
@@ -50,7 +50,7 @@ class KafkaQueue extends Queue implements QueueContract
      * @param \RdKafka\KafkaConsumer $consumer
      * @param array $config
      */
-    public function __construct(\RdKafka\Producer $producer, \RdKafka\Consumer $consumer, $config)
+    public function __construct(\RdKafka\Producer $producer, \RdKafka\KafkaConsumer $consumer, $config)
     {
         $this->defaultQueue = $config['queue'];
         $this->sleepOnError = isset($config['sleep_on_error']) ? $config['sleep_on_error'] : 5;
@@ -127,8 +127,8 @@ class KafkaQueue extends Queue implements QueueContract
      */
     public function later($delay, $job, $data = '', $queue = null)
     {
-        //Later is not sup
-        throw new QueueKafkaException('Later not yet implemented');
+        //Later is not supported by Kafka
+        return $this->push($job, $data, $queue);
     }
 
     /**
@@ -145,15 +145,11 @@ class KafkaQueue extends Queue implements QueueContract
         try {
             $queue = $this->getQueueName($queue);
             if (!array_key_exists($queue, $this->queues)) {
-                $this->queues[$queue] = $this->consumer->newQueue();
-                $topicConf = new \RdKafka\TopicConf();
-                $topicConf->set('auto.offset.reset', 'largest');
-
-                $this->topics[$queue] = $this->consumer->newTopic($queue, $topicConf);
-                $this->topics[$queue]->consumeQueueStart(0, RD_KAFKA_OFFSET_STORED, $this->queues[$queue]);
+                $this->queues[$queue] = $queue;
+                $this->consumer->subscribe($this->queues);
             }
 
-            $message = $this->queues[$queue]->consume(1000);
+            $message = $this->consumer->consume(1000);
 
             if ($message === null) {
                 return null;
@@ -163,7 +159,7 @@ class KafkaQueue extends Queue implements QueueContract
                 case RD_KAFKA_RESP_ERR_NO_ERROR:
                     return new KafkaJob(
                         $this->container, $this, $message,
-                        $this->connectionName, $queue ?: $this->defaultQueue, $this->topics[$queue]
+                        $this->connectionName, $queue ?: $this->defaultQueue, topic: $this->consumer
                     );
                 case RD_KAFKA_RESP_ERR__PARTITION_EOF:
                 case RD_KAFKA_RESP_ERR__TIMED_OUT:

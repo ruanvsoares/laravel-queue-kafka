@@ -16,8 +16,6 @@ use RdKafka\Message;
 
 class KafkaJob extends Job implements JobContract
 {
-    use DetectsDeadlocks;
-
     /**
      * @var KafkaQueue
      */
@@ -32,7 +30,7 @@ class KafkaJob extends Job implements JobContract
     protected $message;
 
     /**
-     * @var ConsumerTopic
+     * @var KafkaConsumer
      */
     protected $topic;
 
@@ -44,9 +42,9 @@ class KafkaJob extends Job implements JobContract
      * @param Message $message
      * @param string $connectionName
      * @param string $queue
-     * @param ConsumerTopic $topic
+     * @param KafkaConsumer $topic
      */
-    public function __construct(Container $container, KafkaQueue $connection, Message $message, $connectionName, $queue, ConsumerTopic $topic)
+    public function __construct(Container $container, KafkaQueue $connection, Message $message, $connectionName, $queue, KafkaConsumer $topic)
     {
         $this->container = $container;
         $this->connection = $connection;
@@ -70,7 +68,6 @@ class KafkaJob extends Job implements JobContract
             with($this->instance = $this->resolve($class))->{$method}($this, $payload['data']);
         } catch (Exception $exception) {
             if (
-                $this->causedByDeadlock($exception) ||
                 Str::contains($exception->getMessage(), ['detected deadlock'])
             ) {
                 sleep($this->connection->getConfig()['sleep_on_deadlock']);
@@ -90,7 +87,7 @@ class KafkaJob extends Job implements JobContract
      */
     public function attempts()
     {
-        return (int) ($this->payload()['attempts']) + 1;
+        return (int)($this->payload()['attempts']) + 1;
     }
 
     /**
@@ -110,7 +107,7 @@ class KafkaJob extends Job implements JobContract
     {
         try {
             parent::delete();
-            $this->topic->offsetStore($this->message->partition, $this->message->offset);
+            $this->topic->commit($this->message);
         } catch (\RdKafka\Exception $exception) {
             throw new QueueKafkaException('Could not delete job from the queue', 0, $exception);
         }
@@ -174,9 +171,9 @@ class KafkaJob extends Job implements JobContract
      *
      * @param array $body
      *
+     * @return mixed
      * @throws Exception
      *
-     * @return mixed
      */
     private function unserialize(array $body)
     {
@@ -184,8 +181,7 @@ class KafkaJob extends Job implements JobContract
             return unserialize($body['data']['command']);
         } catch (Exception $exception) {
             if (
-                $this->causedByDeadlock($exception)
-                || Str::contains($exception->getMessage(), ['detected deadlock'])
+                Str::contains($exception->getMessage(), ['detected deadlock'])
             ) {
                 sleep($this->connection->getConfig()['sleep_on_deadlock']);
 
